@@ -1,0 +1,293 @@
+PROYECTO DE APRENDIZAJE POR REFUERZO
+Navegación hacia la lava well room de una Nether Fortress
+
+Integrantes: Vicente Hernández y Vicente Wiederhold
+Propósito de este archivo: registrar hitos, decisiones y estado de avance.
+El cronograma no está asignado a semanas; se completará cuando el grupo lo defina.
+
+======================================================================
+HITO 1 — DEFINICIÓN DEL PROBLEMA Y DEL ENTORNO
+Estado: DEFINIDO — actualizado para entrenamiento directo en Minecraft
+======================================================================
+
+Pregunta del proyecto:
+¿Puede un agente de RL navegar desde una entrada exterior de una Nether
+Fortress hasta su lava well room y generalizar a fortalezas de seeds no vistas?
+
+Decisiones acordadas:
+
+1. Alcance y comienzo del episodio
+   - El episodio comienza dentro de una fortaleza, en una entrada exterior.
+   - La entrada se elige aleatoriamente entre las entradas identificadas.
+   - El agente comienza orientado hacia el interior de la fortaleza.
+   - Encontrar una fortaleza desde cualquier punto del Nether queda fuera del
+     alcance inicial.
+
+2. Objetivo y terminación
+   - Éxito: el agente entra en la región de la lava well room.
+   - Durante entrenamiento, el wrapper puede dar la recompensa usando
+     coordenadas internas de la zona objetivo; esas coordenadas no se entregan
+     a la política.
+   - En evaluación, registrar la llegada por posición interna y contrastarla
+     con la firma observable de bloques cuando sea posible.
+   - Lava o caída termina el episodio como fallo.
+   - También se termina el episodio al alcanzar un máximo de pasos.
+
+3. Observación
+   - CraftGround entrega imagen RGB y estado estructurado; se comprobó que
+     puede entregar 27 bloques cercanos (3x3x3), además de pose.
+   - La primera opción de política es usar bloques cercanos y frame stacking;
+     RGB queda disponible si el piloto muestra que hace falta más contexto.
+   - No se entrega el mapa completo, coordenadas absolutas de la meta ni
+     etiquetas semánticas de sala.
+   - El tamaño/encoding y la cantidad de observaciones apiladas se fijarán en
+     el piloto de CraftGround.
+
+4. Acciones y movimiento
+   - Acciones relativas al agente: avanzar, retroceder, desplazarse a
+     izquierda/derecha y girar a izquierda/derecha.
+   - El wrapper convierte cada acción en una macro de teclas por una duración
+     fija de ticks; duración y ángulo de giro se calibran en Minecraft.
+   - No se incluye salto inicialmente; se revisará si la ruta real lo requiere.
+   - No se incluye combate; los mobs estarán desactivados.
+
+5. Transición y colisiones
+   - El entorno principal es Minecraft Java 1.21.0 vía CraftGround; la
+     transición es estocástica por física, ticks y control.
+   - Golpear una pared no termina el episodio; lava o caída son fallos
+     terminales.
+   - El simulador propio se conserva como respaldo para depurar y garantizar
+     una alternativa si Minecraft no ofrece suficiente throughput.
+
+6. Recompensa inicial (recompensa dispersa)
+   - Éxito: +1.
+   - Pasos intermedios: 0.
+   - Muerte por lava/caída: 0.
+   - Límite de pasos: 0.
+   - Primero se probará esta recompensa terminal. Reward shaping podrá
+     evaluarse posteriormente como experimento/ablación, no como parte de la
+     configuración inicial.
+
+7. Generalización
+   - Separar las fortalezas por seed, sin compartir seeds entre conjuntos:
+     70% entrenamiento, 15% validación y 15% prueba final.
+   - El conjunto de prueba se reserva para la evaluación final.
+
+8. Formulación conceptual
+   - Como el agente solo recibe información local o RGB egocéntrica, el
+     problema se tratará como POMDP; frame stacking da memoria corta, no
+     observabilidad completa.
+   - Las coordenadas de meta se reservan para reward/evaluación y no se
+     incluyen como entrada de la política.
+
+Entregable del hito:
+   Especificación compartida de inicio, meta, observación, acciones,
+   transiciones, recompensa y protocolo de generalización.
+
+Criterio de cierre:
+   El grupo puede describir sin ambigüedad el episodio directo en Minecraft.
+   El piloto de CraftGround determina observación, macro-acciones y límite de
+   pasos.
+
+======================================================================
+HITO 2 — PRUEBA DE FACTIBILIDAD DE CRAFTGROUND
+Estado: EN PROGRESO — instalación y prueba básica parcialmente completadas
+======================================================================
+
+Avances:
+   - Versión fijada: Minecraft Java 1.21.0 (CraftGround recibe mc_version="1.21").
+   - Instalado Miniforge, entorno Python 3.11/JDK 21, CraftGround 2.7.4 y
+     PyTorch CPU en `craftground-mc121`.
+   - En un mundo de prueba, reset entregó imagen y observación estructurada
+     con 27 bloques (3x3x3); no-op y acciones forward completaron step().
+   - El ajuste `initial_extra_commands=["tick rate 20"]` fue necesario para
+     evitar el retraso severo observado con el tick rate predeterminado 10.000.
+   - El equipo donde se hizo esta prueba solo expone Intel UHD 620; no se
+     detectó NVIDIA/CUDA.
+
+Tareas siguientes:
+   - Confirmar varios reset() repetidos y estabilidad de step() en CraftGround.
+   - Probar macros de movimiento, observación y reinicio reproducible.
+   - Probar una fortaleza real 1.21.0 con mobs desactivados y meta por
+     coordenadas internas.
+   - Medir tiempos de arranque, reset y pasos por segundo; registrar config.
+
+Entregable:
+   Wrapper Gymnasium/CraftGround que completa episodios reproducibles de una
+   fortaleza con observación, acciones y recompensa.
+
+Criterio de cierre:
+   Reset, múltiples step, terminación/recompensa y una acción de movimiento
+   funcionan de forma reproducible en Minecraft Java 1.21.0. Si el throughput
+   resulta inviable, se activa la simulación como respaldo.
+
+======================================================================
+HITO 3 — PREPARACIÓN DE MUNDOS, SEEDS Y GROUND TRUTH
+Estado: PENDIENTE
+======================================================================
+
+Tareas:
+   - Preparar una primera fortaleza en MC 1.21.0 y registrar seed, entrada y
+     coordenadas de referencia de la lava well room para reset/recompensa.
+   - Automatizar la preparación de un conjunto pequeño de mundos/seeds para
+     entrenamiento, validación y prueba.
+   - Separar las seeds 70/15/15; reservar las seeds de prueba hasta la
+     evaluación final.
+   - Usar Amulet/cubiomes como apoyo para validar mapas/coordenadas, no como
+     requisito para el entrenamiento directo en CraftGround.
+
+Herramientas candidatas:
+   CraftGround para crear/resetear mundos; Amulet-core y cubiomes como apoyo
+   opcional para inspeccionar mapas y preparar ground truth.
+
+Entregable:
+   Manifiesto de mundos/seeds con configuración reproducible, spawns y metas
+   de referencia, dividido en entrenamiento/validación/prueba.
+
+Criterio de cierre:
+   Una fortaleza y varias seeds pueden inicializarse/reiniciarse de forma
+   reproducible, con inicio y meta verificables.
+
+======================================================================
+HITO 4 — WRAPPER GYMNASIUM SOBRE CRAFTGROUND
+Estado: PENDIENTE
+======================================================================
+
+Tareas:
+   - Envolver CraftGround con espacios de observación/acción compatibles con
+     DQN y PPO.
+   - Codificar bloques cercanos y frame stacking; no filtrar coordenadas de
+     meta a la política.
+   - Definir macros discretas, tick rate, reward terminal +1, fallos/timeout
+     con reward 0, reset y condiciones de terminación.
+   - Añadir pruebas de API, reset, no-op, movimiento, éxito y fallo.
+
+Entregable:
+   Entorno Gymnasium reproducible sobre Minecraft real y pruebas automatizadas.
+
+Criterio de cierre:
+   La interfaz de CraftGround satisface el Hito 1 y los episodios se reinician
+   y puntúan consistentemente.
+
+======================================================================
+HITO 5 — PILOTO, CALIBRACIÓN Y BASELINES EN MINECRAFT
+Estado: PENDIENTE
+======================================================================
+
+Tareas:
+   - Probar la ventana local 3x3x3, RGB opcional y cantidades de frame stack.
+   - Calibrar duración de macros y límite común de pasos.
+   - Implementar baseline aleatoria.
+   - Usar inspección/ruta de referencia para confirmar alcanzabilidad; el
+     oráculo no es un método de RL comparado.
+   - Comprobar que los episodios y la recompensa dispersa son factibles.
+
+Entregable:
+   Configuración piloto, rendimiento del entorno y resultados iniciales
+   Random/ruta de referencia.
+
+Criterio de cierre:
+   La tarea es alcanzable y las métricas se pueden calcular de forma
+   reproducible.
+
+======================================================================
+HITO 6 — IMPLEMENTACIÓN Y ENTRENAMIENTO DE AGENTES
+Estado: PENDIENTE
+======================================================================
+
+Métodos acordados:
+   1. Random: baseline propia.
+   2. DQN propio: implementación en PyTorch.
+   3. PPO: Stable-Baselines3.
+   4. DQN de Stable-Baselines3: referencia para validar el DQN propio.
+
+Tareas:
+   - Implementar DQN propio con replay buffer, red objetivo y política
+     epsilon-greedy.
+   - Entrenar PPO y DQN de SB3 usando el mismo wrapper de CraftGround.
+   - Mantener comparables seeds, presupuestos de timesteps, observaciones,
+     acciones y esfuerzo de ajuste de hiperparámetros.
+
+Entregable:
+   Modelos entrenados, configuraciones y registros de entrenamiento.
+
+Criterio de cierre:
+   Se puede reproducir la evaluación de cada método y comparar curvas de
+   aprendizaje.
+
+======================================================================
+HITO 7 — EVALUACIÓN DE GENERALIZACIÓN Y ABLACIONES
+Estado: PENDIENTE
+======================================================================
+
+Tareas:
+   - Evaluar los agentes en seeds reservadas de prueba.
+   - Medir tasa de éxito, pasos a la meta y variabilidad entre seeds.
+   - Comparar rendimiento de entrenamiento/validación/prueba.
+   - Si el tiempo lo permite, evaluar ablaciones: observación voxel frente a
+     observación reducida y recompensa terminal frente a reward shaping.
+
+Entregable:
+   Tablas/gráficos, análisis de resultados y respuesta a las hipótesis.
+
+Criterio de cierre:
+   Las conclusiones se basan en evaluación held-out y múltiples seeds, no en
+   episodios de entrenamiento solamente.
+
+======================================================================
+HITO 8 — SIMULADOR PROPIO DE RESPALDO (SI ES NECESARIO)
+Estado: EXTENSIÓN / PLAN DE CONTINGENCIA
+======================================================================
+
+Tareas:
+   - Si CraftGround no ofrece suficiente throughput/estabilidad, crear un
+     simulador compacto con topologías de fortalezas verificadas.
+   - Usarlo para completar la comparación o depurar; transferir a CraftGround
+     solo si el tiempo lo permite.
+
+Entregable:
+   Entorno Gymnasium de respaldo o registro de que no fue necesario.
+
+Criterio de cierre:
+   Se informa si fue necesario activar el respaldo y por qué.
+
+======================================================================
+HITO 9 — INFORME Y PRESENTACIÓN FINAL
+Estado: PENDIENTE
+======================================================================
+
+Tareas:
+   - Documentar problema, entorno, algoritmos, configuración y resultados.
+   - Preparar presentación y demostración.
+   - Incluir limitaciones, reproducibilidad y trabajo futuro.
+
+Entregable:
+   Informe final, presentación y código/datos necesarios para reproducir
+   los experimentos.
+
+======================================================================
+REGISTRO DE AVANCE
+======================================================================
+
+Hito | Fecha | Responsable(s) | Estado | Notas
+-----|-------|----------------|--------|------
+1    |       |                | Definido | Entrenamiento directo en MC 1.21.0
+2    |       |                | En progreso | Smoke test básico pasó con tick rate 20
+3    |       |                | Pendiente |
+4    |       |                | Pendiente |
+5    |       |                | Pendiente |
+6    |       |                | Pendiente |
+7    |       |                | Pendiente |
+8    |       |                | Pendiente |
+9    |       |                | Pendiente |
+
+NOTAS DE ALCANCE
+   - El pie chart/profiler queda fuera del proyecto.
+   - Los mobs se desactivan; no hay combate.
+   - Minecraft Java 1.21.0 vía CraftGround es el entorno principal; el
+     simulador propio queda como respaldo.
+   - Los smoke tests estables usaron `tick rate 20` para evitar retrasos del
+     tick rate predeterminado.
+   - El entorno de instalación probado usa PyTorch CPU; no se detectó NVIDIA/CUDA.
+   - El cronograma por semanas y la asignación de responsables quedan por
+     completar por el grupo.
