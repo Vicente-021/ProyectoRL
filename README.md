@@ -31,13 +31,18 @@ env = make_craftground_env(
     goal_bounds=GoalBounds((xmin, ymin, zmin), (xmax, ymax, zmax)),
     spawn_points=[SpawnPoint(x, y, z, yaw=90)],
 )
-observation, info = env.reset(seed=0)
-observation, reward, terminated, truncated, info = env.step(
-    NetherFortressEnv.ACTION_FORWARD
-)
+try:
+    observation, info = env.reset(seed=0)
+    observation, reward, terminated, truncated, info = env.step(
+        NetherFortressEnv.ACTION_FORWARD
+    )
+finally:
+    env.close()
 ```
 
-Las entradas y coordenadas objetivo todavía deben prepararse para cada seed.
+`close()` termina CraftGround y limpia también el cliente/Gradle asociado a esta
+instancia, sin buscar ni cerrar otras instancias de Minecraft. Las entradas y
+coordenadas objetivo todavía deben prepararse para cada seed.
 Las pruebas unitarias del wrapper se ejecutan con:
 
 ```bash

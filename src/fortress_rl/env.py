@@ -10,11 +10,119 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 import math
+import os
 from typing import Any, Iterable, Sequence
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+
+
+def _capture_craftground_processes(craftground_env: gym.Env) -> list[Any]:
+    """Capture this CraftGround launch and Java processes attached to its IPC.
+
+    CraftGround normally terminates its launcher process group, but Gradle can
+    detach the Minecraft client from that group. Its per-instance IPC socket
+    gives us a narrow way to identify that client and its runtime ancestors.
+    """
+    try:
+        import psutil
+    except ImportError:
+        return []
+
+    captured: dict[int, Any] = {}
+
+    def add(process: Any) -> None:
+        try:
+            captured[process.pid] = process
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return
+
+    # Capture the process tree while CraftGround's Popen handle is still live.
+    popen = getattr(craftground_env, "process", None)
+    if popen is not None and popen.pid is not None:
+        try:
+            root = psutil.Process(popen.pid)
+            add(root)
+            for child in root.children(recursive=True):
+                add(child)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    # Gradle may daemonize its client. CraftGround's own orphan cleanup uses
+    # this socket file to identify Java clients; restrict the lookup to this
+    # environment's port instead of matching every CraftGround process.
+    ipc = getattr(craftground_env, "ipc", None)
+    port = getattr(ipc, "port", None)
+    if port is not None:
+        socket_path = os.path.normpath(f"/tmp/minecraftrl_{port}.sock")
+        runtime_path = os.path.realpath(getattr(craftground_env, "env_path", ""))
+
+        def capture_socket_owner(pid: int | None) -> None:
+            if pid is None:
+                return
+            try:
+                process = psutil.Process(pid)
+                add(process)
+                parent = process.parent()
+                while parent is not None:
+                    try:
+                        if os.path.realpath(parent.cwd()) != runtime_path:
+                            break
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        break
+                    add(parent)
+                    parent = parent.parent()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                return
+
+        # Unix-domain sockets do not consistently appear in open_files(); use
+        # the socket table as the primary lookup and open_files as a fallback.
+        try:
+            for connection in psutil.net_connections(kind="unix"):
+                if os.path.normpath(str(connection.laddr)) == socket_path:
+                    capture_socket_owner(connection.pid)
+        except (psutil.Error, OSError):
+            pass
+
+        for process in psutil.process_iter():
+            try:
+                if not any(
+                    os.path.normpath(open_file.path) == socket_path
+                    for open_file in process.open_files()
+                ):
+                    continue
+                capture_socket_owner(process.pid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+                continue
+
+    return list(captured.values())
+
+
+def _stop_craftground_processes(processes: Sequence[Any]) -> None:
+    """Escalate shutdown only for process handles captured for this instance."""
+    if not processes:
+        return
+
+    try:
+        import psutil
+    except ImportError:
+        return
+
+    _, alive = psutil.wait_procs(list(processes), timeout=2.0)
+    for process in alive:
+        try:
+            process.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    _, alive = psutil.wait_procs(alive, timeout=3.0)
+    for process in alive:
+        try:
+            process.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    psutil.wait_procs(alive, timeout=2.0)
 
 
 @dataclass(frozen=True)
@@ -168,6 +276,7 @@ class NetherFortressEnv(gym.Env[np.ndarray, int]):
         self._frames: deque[np.ndarray] = deque(maxlen=self.frame_stack)
         self._episode_steps = 0
         self._has_reset = False
+        self._closed = False
         self._spawn_index: int | None = None
         self._last_raw_observation: dict[str, Any] | None = None
 
@@ -468,7 +577,18 @@ class NetherFortressEnv(gym.Env[np.ndarray, int]):
         return observation, reward, terminated, truncated, info
 
     def close(self) -> None:
-        self.craftground_env.close()
+        if self._closed:
+            return
+        self._closed = True
+
+        owned_processes = _capture_craftground_processes(self.craftground_env)
+        try:
+            self.craftground_env.close()
+        finally:
+            # CraftGround's process-group shutdown can miss a Gradle-detached
+            # client. Escalate only for processes tied to this env's Popen tree
+            # or its unique IPC socket/port.
+            _stop_craftground_processes(owned_processes)
 
 
 def make_craftground_env(

@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-minecraft = ["craftground==2.7.4"]
+minecraft = ["craftground==2.7.4", "psutil>=5.9"]
 training = ["stable-baselines3"]
 dev = ["pytest"]
 

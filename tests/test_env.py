@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
 
@@ -19,6 +20,7 @@ class FakeCraftGround:
         self.is_in_lava = False
         self.commands = []
         self.pending_commands = []
+        self.close_count = 0
 
     @property
     def is_alive(self):
@@ -83,6 +85,7 @@ class FakeCraftGround:
         return self._observation(), 0.0, False, False, {}
 
     def close(self):
+        self.close_count += 1
         self._alive = False
 
 
@@ -141,6 +144,23 @@ class NetherFortressEnvTests(unittest.TestCase):
         _, info = env.reset(seed=7)
         self.assertEqual(info["position"], (spawn.x, spawn.y, spawn.z))
         self.assertEqual((base.x, base.y, base.z), (spawn.x, spawn.y, spawn.z))
+
+    def test_close_cleans_up_captured_processes_once(self):
+        env, base = self.make_env()
+        owned_processes = [object()]
+        with (
+            patch(
+                "fortress_rl.env._capture_craftground_processes",
+                return_value=owned_processes,
+            ) as capture,
+            patch("fortress_rl.env._stop_craftground_processes") as stop,
+        ):
+            env.close()
+            env.close()
+
+        capture.assert_called_once_with(base)
+        stop.assert_called_once_with(owned_processes)
+        self.assertEqual(base.close_count, 1)
 
 
 if __name__ == "__main__":
