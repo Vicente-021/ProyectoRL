@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nether-fortress-rl"
+version = "0.1.0"
+description = "RL navigation task for Minecraft Nether Fortresses"
+requires-python = ">=3.11"
+dependencies = [
+    "gymnasium>=1.0,<2",
+    "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+minecraft = ["craftground==2.7.4"]
+training = ["stable-baselines3"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

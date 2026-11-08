@@ -100,16 +100,34 @@ Avances:
      PyTorch CPU en `craftground-mc121`.
    - En un mundo de prueba, reset entregó imagen y observación estructurada
      con 27 bloques (3x3x3); no-op y acciones forward completaron step().
+   - Prototipo del wrapper implementado en `src/fortress_rl/env.py`; la
+     factory V2 de CraftGround completó reset y una macro forward.
+   - Las cinco pruebas unitarias del wrapper y `gymnasium.check_env` pasan.
+   - Seed piloto `12345`: `/locate` devolvió una fortaleza cerca de X=112,Z=672;
+     el chunk de inicio contiene 142 piezas de estructura en el volcado NBT.
+   - Pieza `minecraft:nece` (lava well room): AABB inclusiva
+     (66,55,668)–(78,68,680); lava detectada en (72,60,674).
+   - Entrada candidata: `minecraft:nebef` (93,56,731)–(97,65,738), conectada
+     a `minecraft:nesc`; spawn (95.5,61,736.5), yaw 0 hacia +Z.
+   - El wrapper real reinició en ese spawn (suelo cargado) y ocho macros forward
+      con action_repeat=4 avanzaron z de 736.5 a 742.93.
+   - Calibración inicial: action_repeat=4 y cámara ±90° dieron yaw ±89.9°;
+     forward avanzó unos 0.75 bloques por macro en esta ruta.
+   - Un episodio de prueba iniciado en un punto seguro dentro del AABB objetivo
+     produjo reward +1 y terminó correctamente.
    - El ajuste `initial_extra_commands=["tick rate 20"]` fue necesario para
      evitar el retraso severo observado con el tick rate predeterminado 10.000.
    - El equipo donde se hizo esta prueba solo expone Intel UHD 620; no se
      detectó NVIDIA/CUDA.
 
 Tareas siguientes:
-   - Confirmar varios reset() repetidos y estabilidad de step() en CraftGround.
-   - Probar macros de movimiento, observación y reinicio reproducible.
-   - Probar una fortaleza real 1.21.0 con mobs desactivados y meta por
-     coordenadas internas.
+   - Confirmar varios reset() repetidos en la misma fortress y entre seeds.
+   - Calibrar action_repeat y los giros en rutas de la fortaleza.
+    - Spawn candidato aprobado por el grupo para el piloto:
+      (95.5,61,736.5), yaw 0 hacia +Z.
+    - Si hace falta una figura para presentación, obtener una captura visual
+      cargada; no bloquea las pruebas del wrapper.
+   - Verificar muerte por lava/caída y timeout en CraftGround.
    - Medir tiempos de arranque, reset y pasos por segundo; registrar config.
 
 Entregable:
@@ -150,7 +168,7 @@ Criterio de cierre:
 
 ======================================================================
 HITO 4 — WRAPPER GYMNASIUM SOBRE CRAFTGROUND
-Estado: PENDIENTE
+Estado: EN PROGRESO — prototipo y pruebas unitarias completados
 ======================================================================
 
 Tareas:

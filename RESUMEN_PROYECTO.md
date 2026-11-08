@@ -85,6 +85,19 @@ Formulado como un **POMDP** (decisión parcialmente observable):
 - Instalado CraftGround 2.7.4 en Python 3.11 con JDK 21.
 - CraftGround entregó `pov` RGB y `surrounding_blocks` de 3×3×3 (27 bloques).
 - `reset()`, pasos no-op y acciones de avanzar funcionaron en un mundo de prueba.
+- El primer wrapper V2 está en `src/fortress_rl/env.py`; la factory CraftGround
+  completó un reset y la macro forward cambió la posición del jugador.
+- La calibración inicial en el spawn piloto fijó `action_repeat=4`; un giro
+  ±90° produjo aproximadamente ±89.9°, y forward recorrió cerca de 0.75 bloques
+  por macro en esa ruta. Estos valores aún requieren pruebas en otras piezas.
+- Cinco pruebas unitarias y `gymnasium.check_env` pasan. Aún falta confirmar
+  visualmente el spawn candidato y probar reset repetidos entre episodios/seeds.
+- Para la seed piloto `12345`, `/locate` devolvió una fortaleza cerca de
+  `X=112, Z=672`; el NBT guardado incluye 142 piezas de la fortaleza.
+- La pieza `minecraft:nece` marca la lava well room: AABB inclusiva
+  `(66,55,668)`–`(78,68,680)`; se verificó lava en `(72,60,674)`.
+- Se probó el wrapper en esa fortress con spawn candidato `(95.5,61,736.5)`, yaw
+  `0`; avanzó por el corredor y un spawn dentro del AABB dio reward `+1` terminal.
 - Para estabilizar el smoke test se usó `initial_extra_commands=["tick rate 20"]`;
   el tick rate predeterminado de 10.000 produjo retraso extremo en esta máquina.
 - La prueba se ejecutó en un equipo que reporta Intel UHD 620 y PyTorch CPU; no
