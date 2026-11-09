@@ -17,5 +17,8 @@ minecraft = ["craftground==2.7.4", "psutil>=5.9"]
 training = ["stable-baselines3"]
 dev = ["pytest"]
 
+[project.scripts]
+fortress-random-baseline = "fortress_rl.baseline:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]

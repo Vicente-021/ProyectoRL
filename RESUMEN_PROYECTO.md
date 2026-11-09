@@ -90,14 +90,20 @@ Formulado como un **POMDP** (decisión parcialmente observable):
 - La calibración inicial en el spawn piloto fijó `action_repeat=4`; un giro
   ±90° produjo aproximadamente ±89.9°, y forward recorrió cerca de 0.75 bloques
   por macro en esa ruta. Estos valores aún requieren pruebas en otras piezas.
-- Cinco pruebas unitarias y `gymnasium.check_env` pasan. Aún falta confirmar
-  visualmente el spawn candidato y probar reset repetidos entre episodios/seeds.
+- Diez pruebas unitarias pasan. Se verificaron cuatro resets consecutivos en la
+  fortress: el jugador reapareció en el spawn, yaw 0 y sobre el suelo; `close()`
+  dejó cero procesos del cliente.
 - Para la seed piloto `12345`, `/locate` devolvió una fortaleza cerca de
   `X=112, Z=672`; el NBT guardado incluye 142 piezas de la fortaleza.
 - La pieza `minecraft:nece` marca la lava well room: AABB inclusiva
   `(66,55,668)`–`(78,68,680)`; se verificó lava en `(72,60,674)`.
 - Se probó el wrapper en esa fortress con spawn candidato `(95.5,61,736.5)`, yaw
   `0`; avanzó por el corredor y un spawn dentro del AABB dio reward `+1` terminal.
+- Baseline aleatorio en 10 episodios, límite de 100 decisiones: 950 decisiones
+  ejecutadas, 0/10 éxitos y una muerte al paso 50. Throughput: 5.03 decisiones/s
+  durante interacción, 4.92/s steady-state incluyendo resets y 3.69/s end-to-end
+  (el arranque inicial tomó 64.2 s). Es una referencia corta, no permite concluir
+  que un agente entrenado no pueda aprender.
 - Para estabilizar el smoke test se usó `initial_extra_commands=["tick rate 20"]`;
   el tick rate predeterminado de 10.000 produjo retraso extremo en esta máquina.
 - La prueba se ejecutó en un equipo que reporta Intel UHD 620 y PyTorch CPU; no

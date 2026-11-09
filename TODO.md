@@ -43,22 +43,32 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   ~1.2–1.5 bloques en 2 macros.
 - [x] Se observó que retroceder desde el extremo del puente puede llevar a una
   caída; se mantiene la acción y se tratará la muerte/caída como fallo terminal.
+- [x] Verificar cuatro `reset()` consecutivos en la fortress: mismo spawn, yaw 0,
+  jugador en el suelo; `close()` dejó cero procesos de esa instancia.
 - [ ] Si se necesita una figura para la presentación, conseguir una captura/mapa
   visual cargado del punto de inicio; no bloquea el piloto del wrapper.
-- [ ] Verificar que el jugador aparece en el Nether en la entrada tras varios resets.
+- [x] Verificar cuatro resets reales en la entrada: posición, yaw y suelo válidos.
 - [ ] Revisar los bloques 3×3×3, la transformación a observación egocéntrica y
   frame stacking en la fortaleza real.
 - [ ] Refinar la calibración en varias zonas de la fortaleza y probar escaleras,
   colisiones y desplazamiento seguro; los valores actuales son piloto.
 - [ ] Verificar muerte por lava/caída y timeout dentro de CraftGround.
-- [ ] Medir demora de arranque/reset, pasos por segundo y longitud razonable de episodio.
+- [x] Medición CraftGround: 10 episodios, límite 100 decisiones (950 ejecutadas);
+  arranque inicial 64.2 s, resets posteriores 0.05–0.90 s, throughput de
+  interacciones 5.03 decisiones/s, steady state 4.92/s, end-to-end 3.69/s.
 - [ ] Decidir si CraftGround ofrece throughput suficiente para entrenar directamente;
   si no, activar el simulador propio como respaldo.
 
 ## Entrenamiento y evaluación
 
 - [ ] Preparar mundos/seeds y separar por seed: 70% train, 15% validación, 15% test.
-- [ ] Implementar y evaluar baseline Random en CraftGround.
+- [x] Implementar runner reproducible de baseline aleatorio con métricas de
+  éxito, duración, distribución de acciones y throughput.
+- [x] Ejecutar baseline aleatorio: 0/10 éxitos; 1 episodio terminó en muerte al
+  paso 50 y los otros 9 llegaron al límite de 100. Esto es una referencia, no
+  evidencia estadística de que el agente entrenado no pueda aprender.
+- [ ] Decidir si el throughput medido permite entrenar directamente y fijar el
+  presupuesto de interacciones.
 - [ ] Implementar DQN propio en PyTorch.
 - [ ] Entrenar PPO de Stable-Baselines3.
 - [ ] Ejecutar DQN de SB3 como referencia para validar el DQN propio.
@@ -72,6 +82,6 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
 
 ## Pendiente para continuar
 
-La seed, el AABB de lava well room y un spawn candidato están identificados en
-los datos del mundo. Falta confirmar visualmente el spawn antes de fijarlo como
-inicio oficial de los episodios.
+La seed, el AABB de lava well room y el spawn piloto están identificados y
+aprobados. Ya se midió un baseline aleatorio de 10 episodios; falta fijar el
+presupuesto de PPO/DQN y completar los casos terminales de lava/timeout.

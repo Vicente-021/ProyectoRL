@@ -48,3 +48,22 @@ Las pruebas unitarias del wrapper se ejecutan con:
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
+
+## Baseline aleatorio y benchmark
+
+El runner ejecuta acciones uniformemente aleatorias y reporta tasa de éxito,
+duración de episodios, acciones por tipo y decisiones por segundo. El seed
+controla tanto la secuencia aleatoria como los resets. Con el entorno
+`craftground-mc121` activo, se puede correr un piloto corto en la fortress
+aprobada así:
+
+```bash
+PYTHONPATH=src python -m fortress_rl.baseline \
+  --episodes 5 --max-episode-steps 100 --seed 0 \
+  --output results/random_baseline.json
+```
+
+Por defecto usa el mundo seed `12345`, spawn `(95.5,61,736.5)` y la región meta
+`(66,55,668)`–`(78,68,680)`. Se pueden cambiar con `--world-seed`, `--spawn`,
+`--yaw`, `--goal-min` y `--goal-max`. Los informes bajo `results/` se ignoran
+en Git; `env.close()` se ejecuta también si el benchmark falla.
