@@ -14,11 +14,13 @@ dependencies = [
 
 [project.optional-dependencies]
 minecraft = ["craftground==2.7.4", "psutil>=5.9"]
-training = ["stable-baselines3"]
+training = ["stable-baselines3>=2.4,<3", "tensorboard>=2.12"]
 dev = ["pytest"]
 
 [project.scripts]
 fortress-random-baseline = "fortress_rl.baseline:main"
+fortress-train-ppo = "fortress_rl.train_ppo:main"
+fortress-train-dqn-sb3 = "fortress_rl.train_dqn_sb3:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

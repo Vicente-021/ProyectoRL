@@ -55,11 +55,10 @@ def _capture_craftground_processes(craftground_env: gym.Env) -> list[Any]:
     ipc = getattr(craftground_env, "ipc", None)
     port = getattr(ipc, "port", None)
     if port is not None:
-        socket_path = os.path.normpath(f"/tmp/minecraftrl_{port}.sock")
         runtime_path = os.path.realpath(getattr(craftground_env, "env_path", ""))
 
         def capture_socket_owner(pid: int | None) -> None:
-            if pid is None:
+            if pid is None or pid == os.getpid():
                 return
             try:
                 process = psutil.Process(pid)
@@ -76,25 +75,37 @@ def _capture_craftground_processes(craftground_env: gym.Env) -> list[Any]:
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 return
 
-        # Unix-domain sockets do not consistently appear in open_files(); use
-        # the socket table as the primary lookup and open_files as a fallback.
-        try:
-            for connection in psutil.net_connections(kind="unix"):
-                if os.path.normpath(str(connection.laddr)) == socket_path:
-                    capture_socket_owner(connection.pid)
-        except (psutil.Error, OSError):
-            pass
-
-        for process in psutil.process_iter():
+        if psutil.WINDOWS:
+            # CraftGround uses TCP IPC on Windows; psutil does not support
+            # kind="unix" there. The Java client connects to our local server,
+            # so match the remote port (not Python's own listening socket).
             try:
-                if not any(
-                    os.path.normpath(open_file.path) == socket_path
-                    for open_file in process.open_files()
-                ):
+                for connection in psutil.net_connections(kind="inet"):
+                    if getattr(connection.raddr, "port", None) == port:
+                        capture_socket_owner(connection.pid)
+            except (psutil.Error, OSError, ValueError):
+                pass
+        else:
+            socket_path = os.path.normpath(f"/tmp/minecraftrl_{port}.sock")
+            # Unix-domain sockets do not consistently appear in open_files();
+            # use the socket table as the primary lookup and open_files as a fallback.
+            try:
+                for connection in psutil.net_connections(kind="unix"):
+                    if os.path.normpath(str(connection.laddr)) == socket_path:
+                        capture_socket_owner(connection.pid)
+            except (psutil.Error, OSError, ValueError):
+                pass
+
+            for process in psutil.process_iter():
+                try:
+                    if not any(
+                        os.path.normpath(open_file.path) == socket_path
+                        for open_file in process.open_files()
+                    ):
+                        continue
+                    capture_socket_owner(process.pid)
+                except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
                     continue
-                capture_socket_owner(process.pid)
-            except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
-                continue
 
     return list(captured.values())
 
@@ -581,7 +592,23 @@ class NetherFortressEnv(gym.Env[np.ndarray, int]):
             return
         self._closed = True
 
-        owned_processes = _capture_craftground_processes(self.craftground_env)
+        try:
+            owned_processes = _capture_craftground_processes(self.craftground_env)
+        except Exception:
+            # Process discovery is best effort; it must never prevent CraftGround
+            # from receiving its normal close request.
+            owned_processes = []
+        if os.name == "nt":
+            # With use_terminate=True the CraftGround wrapper intentionally
+            # leaves process termination to us. Send its normal IPC exit first;
+            # CTRL_BREAK to cmd.exe can otherwise prompt to terminate gradlew.bat.
+            ipc = getattr(self.craftground_env, "ipc", None)
+            destroy_ipc = getattr(ipc, "destroy", None)
+            if callable(destroy_ipc):
+                try:
+                    destroy_ipc()
+                except Exception:
+                    pass
         try:
             self.craftground_env.close()
         finally:
@@ -601,12 +628,14 @@ def make_craftground_env(
     action_repeat: int = 4,
     frame_stack: int = 4,
     max_episode_steps: int = 500,
+    verbose_gradle: bool = False,
 ) -> NetherFortressEnv:
     """Construct CraftGround 1.21.0 and wrap it for the fortress task.
 
     The wrapper expects CraftGround's V2 MineRL-style action interface. The
     ``tick rate 20`` command is retained from the successful CraftGround smoke
     test; adjust it only after benchmarking a stable setting on the target host.
+    Set ``verbose_gradle`` to show the first-run Minecraft download/build output.
     """
     import craftground
 
@@ -627,6 +656,8 @@ def make_craftground_env(
         mc_version="1.21",
         port=port,
         action_space_version=craftground.ActionSpaceVersion.V2_MINERL_HUMAN,
+        verbose_gradle=verbose_gradle,
+        use_terminate=(os.name == "nt"),
     )
     return NetherFortressEnv(
         base_env,
