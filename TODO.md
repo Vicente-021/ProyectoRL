@@ -80,7 +80,17 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   10.000 decisiones ≈34 min a 4.92 decisiones/s steady-state, más ~64 s del primer
   arranque; revisar la estimación durante el entrenamiento.
 - [ ] Implementar DQN propio en PyTorch.
-- [ ] Entrenar PPO de Stable-Baselines3.
+- [x] Implementar runner PPO de Stable-Baselines3 sobre CraftGround, con checkpoints.
+- [x] Preparar runner piloto DQN de Stable-Baselines3 con medición de progreso.
+- [x] Ejecutar piloto DQN SB3 sparse (19,571 pasos, seed `12345`): 0 éxitos,
+  mejor reducción de distancia a la meta 7% (proxy, no ruta real).
+- [x] Probar DQN SB3 con shaping potencial (20k pasos, seed `12345`): 0 éxitos,
+  mejor reducción de distancia 31% (proxy; no equivale al 31% del camino real).
+- [x] Ejecutar piloto PPO SB3 en Minecraft (103,569 pasos acumulados, seed `12345`):
+  0 éxitos con recompensa terminal dispersa; requiere análisis/recompensa alternativa.
+- [x] Probar PPO ajustado (20,480 pasos; `gamma=0.995`, `gae_lambda=0.98`,
+  `ent_coef=0.03`, `learning_rate=1e-4`): 0 éxitos con recompensa sparse.
+- [x] Probar reward shaping potencial como ablación separada.
 - [ ] Ejecutar DQN de SB3 como referencia para validar el DQN propio.
 - [ ] Mantener iguales observación, acciones, presupuesto de interacciones y seeds.
 - [ ] Evaluar tasa de éxito, pasos a la meta, variabilidad, curvas de aprendizaje y

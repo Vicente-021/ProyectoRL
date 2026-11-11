@@ -162,6 +162,44 @@ class NetherFortressEnvTests(unittest.TestCase):
         stop.assert_called_once_with(owned_processes)
         self.assertEqual(base.close_count, 1)
 
+    def test_close_still_closes_craftground_if_process_capture_fails(self):
+        env, base = self.make_env()
+        with (
+            patch(
+                "fortress_rl.env._capture_craftground_processes",
+                side_effect=ValueError("unsupported socket kind"),
+            ),
+            patch("fortress_rl.env._stop_craftground_processes") as stop,
+        ):
+            env.close()
+
+        stop.assert_called_once_with([])
+        self.assertEqual(base.close_count, 1)
+
+    def test_windows_close_sends_ipc_exit_without_ctrl_break_path(self):
+        env, base = self.make_env()
+
+        class FakeIPC:
+            destroyed = False
+
+            def destroy(self):
+                self.destroyed = True
+
+        base.ipc = FakeIPC()
+        with (
+            patch("fortress_rl.env.os.name", "nt"),
+            patch(
+                "fortress_rl.env._capture_craftground_processes",
+                return_value=[],
+            ),
+            patch("fortress_rl.env._stop_craftground_processes") as stop,
+        ):
+            env.close()
+
+        self.assertTrue(base.ipc.destroyed)
+        self.assertEqual(base.close_count, 1)
+        stop.assert_called_once_with([])
+
 
 if __name__ == "__main__":
     unittest.main()

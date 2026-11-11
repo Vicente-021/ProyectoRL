@@ -3,3 +3,5 @@ __pycache__/
 .pytest_cache/
 py_log.csv
 results/
+runs/
+*.egg-info/
