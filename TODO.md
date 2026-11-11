@@ -72,13 +72,9 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
 - [x] Ejecutar baseline aleatorio: 0/10 éxitos; 1 episodio terminó en muerte al
   paso 50 y los otros 9 llegaron al límite de 100. Esto es una referencia, no
   evidencia estadística de que el agente entrenado no pueda aprender.
-- [ ] Decidir si el throughput medido permite entrenar directamente y fijar el
-  presupuesto de interacciones.
-- [ ] Implementar runner de PPO (Stable-Baselines3) con Monitor/logs, evaluación
-  periódica, checkpoints y cierre limpio del entorno; hacer un smoke test corto.
-- [ ] Definir presupuesto y criterio de parada del piloto PPO. Referencia inicial:
-  10.000 decisiones ≈34 min a 4.92 decisiones/s steady-state, más ~64 s del primer
-  arranque; revisar la estimación durante el entrenamiento.
+- [x] Confirmar factibilidad de pilotos directos en CraftGround: se ejecutaron
+  más de 100k pasos acumulados de PPO; el throughput (~4.92 decisiones/s steady
+  state) es suficiente para pilotos, aunque limita experimentos largos.
 - [ ] Implementar DQN propio en PyTorch.
 - [x] Implementar runner PPO de Stable-Baselines3 sobre CraftGround, con checkpoints.
 - [x] Preparar runner piloto DQN de Stable-Baselines3 con medición de progreso.
@@ -90,18 +86,18 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   0 éxitos con recompensa terminal dispersa; requiere análisis/recompensa alternativa.
 - [x] Probar PPO ajustado (20,480 pasos; `gamma=0.995`, `gae_lambda=0.98`,
   `ent_coef=0.03`, `learning_rate=1e-4`): 0 éxitos con recompensa sparse.
-- [x] Probar reward shaping potencial como ablación separada.
+- [x] Probar reward shaping potencial como ablación separada; mejoró el proxy de
+  distancia en DQN pero no produjo éxitos.
 - [ ] Ejecutar DQN de SB3 como referencia para validar el DQN propio.
 - [ ] Mantener iguales observación, acciones, presupuesto de interacciones y seeds.
 - [ ] Evaluar tasa de éxito, pasos a la meta, variabilidad, curvas de aprendizaje y
   generalización en seeds reservadas.
-- [ ] Si la recompensa terminal no produce aprendizaje, probar *reward shaping* como
-  contingencia/ablación.
 - [ ] Si hace falta, implementar simulador Gymnasium compacto como respaldo.
 - [ ] Documentar resultados, limitaciones y reproducibilidad.
 
 ## Pendiente para continuar
 
 La seed, el AABB de lava well room y el spawn piloto están identificados y
-aprobados. El ciclo terminal→reset se verificó para éxito y muerte. Falta
-implementar el runner PPO, fijar su presupuesto y verificar lava/timeout.
+aprobados. El ciclo terminal→reset se verificó para éxito y muerte; los runners
+PPO/DQN y los primeros pilotos ya están hechos. Faltan evaluación multi-seed,
+validación del DQN propio y pruebas terminales de lava/timeout.
