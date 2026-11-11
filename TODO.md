@@ -45,6 +45,10 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   caída; se mantiene la acción y se tratará la muerte/caída como fallo terminal.
 - [x] Verificar cuatro `reset()` consecutivos en la fortress: mismo spawn, yaw 0,
   jugador en el suelo; `close()` dejó cero procesos de esa instancia.
+- [x] Verificar ciclo de éxito real: reward `+1`/`terminated=True`, luego `reset()`
+  al spawn piloto y otro `step()` válido.
+- [x] Verificar ciclo tras muerte: el episodio aleatorio 5 terminó por muerte al
+  paso 50 y el episodio 6 hizo reset y continuó hasta el límite.
 - [ ] Si se necesita una figura para la presentación, conseguir una captura/mapa
   visual cargado del punto de inicio; no bloquea el piloto del wrapper.
 - [x] Verificar cuatro resets reales en la entrada: posición, yaw y suelo válidos.
@@ -52,7 +56,8 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   frame stacking en la fortaleza real.
 - [ ] Refinar la calibración en varias zonas de la fortaleza y probar escaleras,
   colisiones y desplazamiento seguro; los valores actuales son piloto.
-- [ ] Verificar muerte por lava/caída y timeout dentro de CraftGround.
+- [ ] Verificar muerte por lava y timeout dentro de CraftGround (la muerte normal
+  y el reset posterior ya se comprobaron).
 - [x] Medición CraftGround: 10 episodios, límite 100 decisiones (950 ejecutadas);
   arranque inicial 64.2 s, resets posteriores 0.05–0.90 s, throughput de
   interacciones 5.03 decisiones/s, steady state 4.92/s, end-to-end 3.69/s.
@@ -69,6 +74,11 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
   evidencia estadística de que el agente entrenado no pueda aprender.
 - [ ] Decidir si el throughput medido permite entrenar directamente y fijar el
   presupuesto de interacciones.
+- [ ] Implementar runner de PPO (Stable-Baselines3) con Monitor/logs, evaluación
+  periódica, checkpoints y cierre limpio del entorno; hacer un smoke test corto.
+- [ ] Definir presupuesto y criterio de parada del piloto PPO. Referencia inicial:
+  10.000 decisiones ≈34 min a 4.92 decisiones/s steady-state, más ~64 s del primer
+  arranque; revisar la estimación durante el entrenamiento.
 - [ ] Implementar DQN propio en PyTorch.
 - [ ] Entrenar PPO de Stable-Baselines3.
 - [ ] Ejecutar DQN de SB3 como referencia para validar el DQN propio.
@@ -83,5 +93,5 @@ Integrantes: Vicente Hernández y Vicente Wiederhold
 ## Pendiente para continuar
 
 La seed, el AABB de lava well room y el spawn piloto están identificados y
-aprobados. Ya se midió un baseline aleatorio de 10 episodios; falta fijar el
-presupuesto de PPO/DQN y completar los casos terminales de lava/timeout.
+aprobados. El ciclo terminal→reset se verificó para éxito y muerte. Falta
+implementar el runner PPO, fijar su presupuesto y verificar lava/timeout.
